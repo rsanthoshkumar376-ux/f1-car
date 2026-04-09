@@ -2,321 +2,421 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FA Racer">
+    <meta name="theme-color" content="#050310">
     <title>Formula Algorithmic: Spectral Racer</title>
-    <meta name="description" content="A deterministic, seed-based F1 racing game powered by algorithmic physics.">
+    <meta name="description" content="A deterministic, seed-based F1 racing game. Drive, flip gravity, collect coins.">
+    <link rel="manifest" href="manifest.json">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-        body {
-            background: #050310;
-            font-family: 'Rajdhani', sans-serif;
+        :root {
+            --green: #20ff77;
+            --purple: #8822ff;
+            --red: #ff3131;
+            --gold: #ffd700;
+            --bg: #050310;
+        }
+
+        html, body {
+            width: 100%; height: 100%;
+            background: var(--bg);
             overflow: hidden;
-            width: 100vw;
-            height: 100vh;
+            font-family: 'Rajdhani', sans-serif;
+            touch-action: none;
         }
 
         #gameCanvas {
-            position: absolute;
+            position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
+            display: block;
         }
 
-        /* ===== HUD ===== */
+        /* ══════════ HUD ══════════ */
         #hud {
-            position: absolute;
+            position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
             pointer-events: none;
-            z-index: 10;
+            z-index: 20;
             display: none;
         }
 
         .hud-top {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            padding: 1.2rem 2rem;
+            padding: env(safe-area-inset-top, 12px) 16px 0;
+            padding-top: max(env(safe-area-inset-top, 0px), 12px);
+            gap: 8px;
         }
 
         .hud-box {
-            background: rgba(0,0,0,0.6);
-            border: 1px solid rgba(32,255,119,0.3);
-            padding: 0.5rem 1.2rem;
-            border-radius: 4px;
+            background: rgba(0,0,0,0.65);
+            border: 1px solid rgba(32,255,119,0.25);
+            border-radius: 6px;
+            padding: 5px 12px;
             text-align: center;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(6px);
+            flex: 1;
         }
 
         .hud-label {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.55rem;
-            color: rgba(32,255,119,0.6);
+            font-size: 0.45rem;
             letter-spacing: 3px;
+            color: rgba(32,255,119,0.55);
+            line-height: 1;
         }
 
         .hud-value {
             font-family: 'Orbitron', sans-serif;
-            font-size: 1.4rem;
-            color: #20ff77;
-            text-shadow: 0 0 10px #20ff77;
+            font-size: clamp(0.9rem, 3.5vw, 1.3rem);
+            color: var(--green);
+            text-shadow: 0 0 10px var(--green);
+            line-height: 1.2;
         }
 
-        #speed-bar-wrap {
-            position: absolute;
-            bottom: 2rem;
-            left: 2rem;
-            width: 200px;
+        /* Speed bar */
+        #speed-wrap {
+            position: fixed;
+            bottom: max(env(safe-area-inset-bottom, 0px), 140px);
+            left: 16px;
+            width: min(160px, 30vw);
+            pointer-events: none;
+            z-index: 20;
         }
-
         #speed-label {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.55rem;
-            color: rgba(32,255,119,0.6);
+            font-size: 0.45rem;
             letter-spacing: 3px;
-            margin-bottom: 4px;
+            color: rgba(32,255,119,0.5);
+            margin-bottom: 3px;
         }
-
         #speed-track {
-            background: rgba(0,0,0,0.6);
-            border: 1px solid rgba(32,255,119,0.3);
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(32,255,119,0.2);
             border-radius: 20px;
-            height: 10px;
+            height: 8px;
             overflow: hidden;
         }
-
         #speed-bar {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, #20ff77, #00ccff);
+            background: linear-gradient(90deg, var(--green), #00ccff);
             border-radius: 20px;
-            box-shadow: 0 0 8px #20ff77;
+            box-shadow: 0 0 6px var(--green);
             transition: width 0.1s;
         }
 
-        #gravity-indicator {
-            position: absolute;
-            bottom: 2rem;
-            right: 2rem;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.5rem;
-            color: #20ff77;
-            text-shadow: 0 0 15px #20ff77;
-            transition: transform 0.3s;
+        /* Gravity */
+        #grav-icon {
+            position: fixed;
+            bottom: max(env(safe-area-inset-bottom, 0px), 140px);
+            right: 16px;
+            font-size: clamp(1.5rem, 5vw, 2.2rem);
+            color: var(--green);
+            text-shadow: 0 0 12px var(--green);
+            pointer-events: none;
+            z-index: 20;
+            transition: transform 0.3s ease;
         }
 
-        #controls-hint {
-            position: absolute;
-            bottom: 1rem;
+        /* Notification */
+        #notification {
+            position: fixed;
+            top: 28%;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.3);
-            letter-spacing: 2px;
             font-family: 'Orbitron', sans-serif;
+            font-size: clamp(0.75rem, 3vw, 1.1rem);
+            letter-spacing: 3px;
+            color: var(--gold);
+            text-shadow: 0 0 16px var(--gold);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 30;
+            transition: opacity 0.4s;
+            white-space: nowrap;
         }
 
-        #combo-display {
-            position: absolute;
-            top: 50%;
+        /* Combo */
+        #combo-pop {
+            position: fixed;
+            top: 38%;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translateX(-50%);
             font-family: 'Orbitron', sans-serif;
-            font-size: 3rem;
+            font-size: clamp(1.5rem, 6vw, 3rem);
             font-weight: 900;
-            color: #ffd700;
-            text-shadow: 0 0 20px #ffd700;
+            color: var(--gold);
+            text-shadow: 0 0 20px var(--gold);
             opacity: 0;
-            transition: opacity 0.5s;
+            pointer-events: none;
+            z-index: 30;
+            transition: opacity 0.4s;
+        }
+
+        /* ══════════ MOBILE CONTROLS ══════════ */
+        #mobile-controls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: max(env(safe-area-inset-bottom, 0px) + 130px, 130px);
+            z-index: 25;
             pointer-events: none;
         }
 
-        /* ===== SCREENS ===== */
-        .screen {
+        .ctrl-btn {
             position: absolute;
+            background: rgba(32,255,119,0.08);
+            border: 2px solid rgba(32,255,119,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: var(--green);
+            user-select: none;
+            pointer-events: all;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.1s, border-color 0.1s, transform 0.1s;
+            cursor: pointer;
+        }
+
+        .ctrl-btn:active, .ctrl-btn.active {
+            background: rgba(32,255,119,0.25);
+            border-color: var(--green);
+            transform: scale(0.93);
+            box-shadow: 0 0 18px rgba(32,255,119,0.4);
+        }
+
+        #btn-left  { bottom: max(env(safe-area-inset-bottom,0px)+16px,16px); left:16px; width:72px;height:72px; }
+        #btn-right { bottom: max(env(safe-area-inset-bottom,0px)+16px,16px); left:104px; width:72px;height:72px; }
+        #btn-flip  {
+            bottom: max(env(safe-area-inset-bottom,0px)+16px,16px);
+            right: 16px;
+            width: 90px; height: 90px;
+            background: rgba(136,34,255,0.12);
+            border-color: rgba(136,34,255,0.4);
+            color: #cc88ff;
+            font-size: 2rem;
+        }
+        #btn-flip:active, #btn-flip.active {
+            background: rgba(136,34,255,0.3);
+            border-color: var(--purple);
+            box-shadow: 0 0 20px rgba(136,34,255,0.5);
+        }
+        #btn-nitro {
+            bottom: max(env(safe-area-inset-bottom,0px)+104px,104px);
+            right: 24px;
+            width: 56px; height: 56px;
+            background: rgba(255,100,0,0.1);
+            border-color: rgba(255,150,0,0.4);
+            color: #ff9900;
+            font-size: 1.3rem;
+        }
+        #btn-nitro:active, #btn-nitro.active {
+            background: rgba(255,100,0,0.3);
+            border-color: #ff9900;
+            box-shadow: 0 0 16px rgba(255,150,0,0.5);
+        }
+
+        /* Show on touch devices */
+        @media (pointer: coarse) {
+            #mobile-controls { display: block; }
+            #speed-wrap { bottom: max(env(safe-area-inset-bottom, 0px), 170px); }
+            #grav-icon  { display: none; }
+        }
+
+        /* ══════════ SCREENS ══════════ */
+        .screen {
+            position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: rgba(5, 3, 16, 0.92);
-            backdrop-filter: blur(12px);
+            background: rgba(5,3,16,0.93);
+            backdrop-filter: blur(14px);
             z-index: 100;
+            padding: 1rem;
+            padding-top: max(env(safe-area-inset-top,0px) + 1rem, 1rem);
+            padding-bottom: max(env(safe-area-inset-bottom,0px) + 1rem, 1rem);
         }
 
         .screen.hidden { display: none; }
 
+        /* Start screen */
         #start-screen h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: clamp(2.5rem, 8vw, 5.5rem);
+            font-size: clamp(2rem, 9vw, 5rem);
             font-weight: 900;
-            color: #20ff77;
-            text-shadow: 0 0 40px #20ff77, 0 0 80px rgba(32,255,119,0.3);
-            letter-spacing: 6px;
-            animation: pulse 2s infinite;
+            color: var(--green);
+            text-shadow: 0 0 40px var(--green), 0 0 80px rgba(32,255,119,0.25);
+            letter-spacing: clamp(2px, 2vw, 8px);
+            line-height: 1;
+            text-align: center;
+            animation: titlePulse 2.5s ease-in-out infinite;
         }
 
-        #start-screen h1 span {
-            color: #8822ff;
-            text-shadow: 0 0 40px #8822ff;
-        }
+        #start-screen h1 span { color: var(--purple); text-shadow: 0 0 40px var(--purple); }
 
-        @keyframes pulse {
+        @keyframes titlePulse {
             0%, 100% { filter: brightness(1); }
-            50% { filter: brightness(1.2); }
+            50%       { filter: brightness(1.25); }
         }
 
         .subtitle {
             font-family: 'Orbitron', sans-serif;
-            font-size: clamp(0.7rem, 2vw, 1rem);
-            color: #8822ff;
-            letter-spacing: 8px;
-            margin: 0.8rem 0 3rem;
+            font-size: clamp(0.6rem, 2vw, 0.9rem);
+            color: var(--purple);
+            letter-spacing: clamp(4px, 3vw, 10px);
+            margin: 0.6rem 0 2.5rem;
         }
 
-        .btn-container {
+        .btn-stack {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
-            width: min(320px, 80vw);
+            gap: 0.75rem;
+            width: min(300px, 85vw);
         }
 
         .btn {
             font-family: 'Orbitron', sans-serif;
-            padding: 1rem 2rem;
-            font-size: 1rem;
+            padding: clamp(0.7rem, 3vw, 1rem) 1.5rem;
+            font-size: clamp(0.7rem, 2.5vw, 1rem);
             font-weight: 700;
             border: none;
             cursor: pointer;
             letter-spacing: 3px;
-            clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+            clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
             transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .btn-primary {
-            background: #20ff77;
+            background: var(--green);
             color: #050310;
-            box-shadow: 0 0 20px rgba(32,255,119,0.5);
+            box-shadow: 0 0 20px rgba(32,255,119,0.4);
         }
-
-        .btn-primary:hover {
+        .btn-primary:hover, .btn-primary:active {
             background: #40ffaa;
-            box-shadow: 0 0 35px rgba(32,255,119,0.8);
-            transform: scale(1.05);
+            box-shadow: 0 0 35px rgba(32,255,119,0.7);
+            transform: scale(1.04);
         }
 
         .btn-secondary {
-            background: rgba(136,34,255,0.15);
-            color: #8822ff;
-            border: 1px solid rgba(136,34,255,0.4);
+            background: rgba(136,34,255,0.12);
+            color: #cc88ff;
+            border: 1px solid rgba(136,34,255,0.35);
         }
 
-        .btn-secondary:hover {
-            background: rgba(136,34,255,0.3);
-            border-color: #8822ff;
-            box-shadow: 0 0 20px rgba(136,34,255,0.4);
+        .btn-secondary:hover, .btn-secondary:active {
+            background: rgba(136,34,255,0.28);
+            border-color: var(--purple);
+            box-shadow: 0 0 18px rgba(136,34,255,0.35);
         }
 
-        .controls-info {
-            margin-top: 2.5rem;
+        .key-hints {
+            margin-top: 2rem;
             display: flex;
-            gap: 2rem;
-            color: rgba(255,255,255,0.35);
-            font-size: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem 2rem;
+            color: rgba(255,255,255,0.25);
+            font-size: 0.65rem;
             letter-spacing: 2px;
             font-family: 'Orbitron', sans-serif;
         }
+        .key-hints span { color: var(--green); }
 
-        .controls-info span { color: #20ff77; }
-
-        /* GAME OVER */
+        /* Game Over */
         #game-over-screen h1 {
             font-family: 'Orbitron', sans-serif;
-            font-size: clamp(2rem, 6vw, 4rem);
-            color: #ff3131;
-            text-shadow: 0 0 40px #ff3131;
-            letter-spacing: 6px;
-            margin-bottom: 2.5rem;
+            font-size: clamp(1.5rem, 6vw, 3.5rem);
+            color: var(--red);
+            text-shadow: 0 0 35px var(--red);
+            letter-spacing: 5px;
+            margin-bottom: 1.5rem;
+            text-align: center;
         }
+        #game-over-screen h1.win { color: var(--green); text-shadow: 0 0 35px var(--green); }
 
-        #game-over-screen h1.win {
-            color: #20ff77;
-            text-shadow: 0 0 40px #20ff77;
+        .stats-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
         }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2.5rem;
-        }
-
         .stat-box {
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.1);
-            padding: 1.2rem 2rem;
+            border-radius: 6px;
+            padding: clamp(0.7rem, 2vw, 1rem) clamp(1rem, 3vw, 1.8rem);
             text-align: center;
-            border-radius: 4px;
+            min-width: 80px;
         }
-
-        .stat-box .label {
+        .stat-box .lbl {
             font-family: 'Orbitron', sans-serif;
-            font-size: 0.55rem;
-            color: rgba(255,255,255,0.4);
-            letter-spacing: 4px;
+            font-size: 0.5rem;
+            letter-spacing: 3px;
+            color: rgba(255,255,255,0.35);
             display: block;
-            margin-bottom: 0.4rem;
+            margin-bottom: 4px;
         }
-
-        .stat-box .value {
+        .stat-box .val {
             font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
-            color: #20ff77;
+            font-size: clamp(1.3rem, 5vw, 2rem);
+            color: var(--green);
         }
 
-        /* NOTIFICATION */
-        #notification {
-            position: absolute;
-            top: 30%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            letter-spacing: 4px;
-            color: #ffd700;
-            text-shadow: 0 0 20px #ffd700;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 50;
-            transition: opacity 0.4s;
-        }
-
-        /* PAUSE SCREEN */
+        /* Pause */
         #pause-screen h2 {
             font-family: 'Orbitron', sans-serif;
-            font-size: 3rem;
-            color: #20ff77;
-            text-shadow: 0 0 30px #20ff77;
-            letter-spacing: 10px;
+            font-size: clamp(2rem, 8vw, 3.5rem);
+            color: var(--green);
+            text-shadow: 0 0 30px var(--green);
+            letter-spacing: 8px;
             margin-bottom: 2rem;
         }
 
-        /* Scanline overlay */
+        /* Garage */
+        .garage-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.5rem, 6vw, 2.5rem);
+            color: var(--purple);
+            text-shadow: 0 0 30px var(--purple);
+            letter-spacing: 5px;
+            margin-bottom: 1.5rem;
+        }
+
+        #garage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 0.75rem;
+            width: min(860px, 95vw);
+            max-height: 55vh;
+            overflow-y: auto;
+            padding: 0.25rem;
+        }
+
+        /* Scanlines */
         body::after {
             content: '';
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(0,0,0,0.03) 2px,
-                rgba(0,0,0,0.03) 4px
-            );
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px);
             pointer-events: none;
             z-index: 9999;
         }
@@ -326,7 +426,7 @@
 
 <canvas id="gameCanvas"></canvas>
 
-<!-- HUD -->
+<!-- ══════════ HUD ══════════ -->
 <div id="hud">
     <div class="hud-top">
         <div class="hud-box">
@@ -342,75 +442,74 @@
             <div class="hud-value" id="dist-display">0m</div>
         </div>
     </div>
-    <div id="speed-bar-wrap">
-        <div id="speed-label">VELOCITY</div>
-        <div id="speed-track"><div id="speed-bar"></div></div>
-    </div>
-    <div id="gravity-indicator">↑</div>
-    <div id="controls-hint">A/D DRIVE &nbsp;|&nbsp; SPACE FLIP GRAVITY &nbsp;|&nbsp; N NITRO</div>
-    <div id="combo-display"></div>
 </div>
 
-<!-- NOTIFICATION -->
-<div id="notification"></div>
+<div id="speed-wrap">
+    <div id="speed-label">VELOCITY</div>
+    <div id="speed-track"><div id="speed-bar"></div></div>
+</div>
 
-<!-- START SCREEN -->
+<div id="grav-icon">↑</div>
+<div id="notification"></div>
+<div id="combo-pop"></div>
+
+<!-- ══════════ MOBILE CONTROLS ══════════ -->
+<div id="mobile-controls">
+    <button class="ctrl-btn" id="btn-left"  aria-label="Drive Left">◀</button>
+    <button class="ctrl-btn" id="btn-right" aria-label="Drive Right">▶</button>
+    <button class="ctrl-btn" id="btn-nitro" aria-label="Nitro">⚡</button>
+    <button class="ctrl-btn" id="btn-flip"  aria-label="Flip Gravity">↕</button>
+</div>
+
+<!-- ══════════ SCREENS ══════════ -->
+
+<!-- START -->
 <div id="start-screen" class="screen">
-    <h1>FORMULA<span>ALGORITHMIC</span></h1>
+    <h1>FORMULA<br><span>ALGORITHMIC</span></h1>
     <p class="subtitle">SPECTRAL RACER</p>
-    <div class="btn-container">
-        <button class="btn btn-primary" id="start-btn">INITIALIZE DRIVE</button>
+    <div class="btn-stack">
+        <button class="btn btn-primary"   id="start-btn">INITIALIZE DRIVE</button>
         <button class="btn btn-secondary" id="garage-btn">SPECTRAL WORKSHOP</button>
     </div>
-    <div class="controls-info">
+    <div class="key-hints">
         <div><span>A/D</span> DRIVE</div>
         <div><span>SPACE</span> FLIP GRAVITY</div>
         <div><span>N</span> NITRO</div>
     </div>
 </div>
 
-<!-- GARAGE SCREEN -->
+<!-- GARAGE -->
 <div id="garage-screen" class="screen hidden">
-    <h1 style="font-family:'Orbitron',sans-serif;font-size:2.5rem;color:#8822ff;text-shadow:0 0 30px #8822ff;letter-spacing:6px;margin-bottom:2rem;">WORKSHOP</h1>
-    <div id="garage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;width:min(900px,90vw);max-height:60vh;overflow-y:auto;padding:0.5rem;"></div>
-    <button class="btn btn-secondary" id="garage-back-btn" style="margin-top:2rem;pointer-events:all;">BACK</button>
+    <div class="garage-title">WORKSHOP</div>
+    <div id="garage-grid"></div>
+    <button class="btn btn-secondary" id="garage-back-btn" style="margin-top:1.5rem;pointer-events:all;">← BACK</button>
 </div>
 
-<!-- GAME OVER SCREEN -->
+<!-- GAME OVER -->
 <div id="game-over-screen" class="screen hidden">
-    <h1 id="game-over-title">DRIVE TERMINATED</h1>
-    <div class="stats-grid">
-        <div class="stat-box">
-            <span class="label">DISTANCE</span>
-            <div class="value" id="final-distance">0m</div>
-        </div>
-        <div class="stat-box">
-            <span class="label">COINS</span>
-            <div class="value" id="final-coins">0</div>
-        </div>
-        <div class="stat-box">
-            <span class="label">SCORE</span>
-            <div class="value" id="final-score">0</div>
-        </div>
+    <h1 id="go-title">DRIVE TERMINATED</h1>
+    <div class="stats-row">
+        <div class="stat-box"><span class="lbl">DISTANCE</span><div class="val" id="final-dist">0m</div></div>
+        <div class="stat-box"><span class="lbl">COINS</span><div class="val" id="final-coins">0</div></div>
+        <div class="stat-box"><span class="lbl">SCORE</span><div class="val" id="final-score">0</div></div>
     </div>
-    <div class="btn-container">
-        <button class="btn btn-primary" id="retry-btn">REBOOT</button>
+    <div class="btn-stack">
+        <button class="btn btn-primary"   id="retry-btn">REBOOT</button>
         <button class="btn btn-secondary" id="menu-btn">MAIN TERMINAL</button>
     </div>
 </div>
 
-<!-- PAUSE SCREEN -->
+<!-- PAUSE -->
 <div id="pause-screen" class="screen hidden">
     <h2>PAUSED</h2>
-    <div class="btn-container">
-        <button class="btn btn-primary" id="resume-btn">RESUME</button>
-        <button class="btn btn-secondary" id="pause-menu-btn">MAIN TERMINAL</button>
+    <div class="btn-stack">
+        <button class="btn btn-primary"   id="resume-btn">RESUME</button>
+        <button class="btn btn-secondary" id="pause-quit-btn">QUIT</button>
     </div>
 </div>
 
-<!-- Matter.js Physics -->
+<!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-<!-- Game Script - Single self-contained file -->
 <script src="js/game.js"></script>
 
 </body>

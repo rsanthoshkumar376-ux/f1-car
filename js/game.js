@@ -620,8 +620,8 @@ const UI = {
         this.combo += 0.5;
         this.comboTimer = 2000;
         this.score += Math.floor(100 * this.combo);
-        const cd = document.getElementById('combo-display');
-        if (this.combo > 2) {
+        const cd = document.getElementById('combo-pop');
+        if (cd && this.combo > 2) {
             cd.textContent = 'x' + this.combo.toFixed(1);
             cd.style.opacity = '1';
         }
@@ -634,10 +634,11 @@ const UI = {
             this.comboTimer -= dt;
             if (this.comboTimer <= 0) {
                 this.combo = 1;
-                document.getElementById('combo-display').style.opacity = '0';
+                const cd = document.getElementById('combo-pop');
+                if (cd) cd.style.opacity = '0';
             }
         }
-        this.score += Math.floor(this.combo * 0.01); // distance score
+        this.score += Math.floor(this.combo * 0.01);
     },
 
     notify(text, duration = 1500) {
@@ -649,21 +650,31 @@ const UI = {
     },
 
     setGravityIndicator(dir) {
-        document.getElementById('gravity-indicator').style.transform = dir > 0 ? '' : 'scaleY(-1)';
+        const el = document.getElementById('grav-icon');
+        if (el) el.style.transform = dir > 0 ? '' : 'scaleY(-1)';
     },
 
-    showHUD()      { document.getElementById('hud').style.display = 'block'; },
-    hideHUD()      { document.getElementById('hud').style.display = 'none'; },
-    showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); },
+    showHUD()      {
+        document.getElementById('hud').style.display = 'block';
+        document.getElementById('speed-wrap').style.display = 'block';
+        const mc = document.getElementById('mobile-controls');
+        if (mc) mc.style.display = 'block';
+    },
+    hideHUD()      {
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('speed-wrap').style.display = 'none';
+        const mc = document.getElementById('mobile-controls');
+        if (mc) mc.style.display = 'none';
+    },
+    showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); const el = document.getElementById(id); if (el) el.classList.remove('hidden'); },
     hideAllScreens() { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); },
 
     showGameOver(isWin) {
-        document.getElementById('final-score').textContent    = this.score;
-        document.getElementById('final-coins').textContent    = this.coins;
-        document.getElementById('final-distance').textContent = this.dist + 'm';
-        const title = document.getElementById('game-over-title');
-        title.textContent  = isWin ? 'SECTOR CLEARED' : 'DRIVE TERMINATED';
-        title.className    = isWin ? 'win' : '';
+        document.getElementById('final-score').textContent = this.score;
+        document.getElementById('final-coins').textContent = this.coins;
+        document.getElementById('final-dist').textContent  = this.dist + 'm';
+        const title = document.getElementById('go-title');
+        if (title) { title.textContent = isWin ? 'SECTOR CLEARED' : 'DRIVE TERMINATED'; title.className = isWin ? 'win' : ''; }
         this.showScreen('game-over-screen');
     },
 
@@ -737,11 +748,10 @@ const Game = {
         AudioEngine.init();
         Garage.init();
 
-        // Input
+        // ── Keyboard input ──
         window.addEventListener('keydown', e => {
             const k = e.key.toLowerCase();
             this.keys[k] = true;
-
             if (k === ' ' || k === 'arrowup' || k === 'w') {
                 e.preventDefault();
                 if (this.isRunning && !this.isPaused) this.flipGravity();
@@ -752,43 +762,57 @@ const Game = {
         });
         window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; });
 
-        // Touch
-        this.canvas.addEventListener('touchstart', e => {
-            if (!this.isRunning || this.isPaused) return;
-            e.preventDefault();
-            const tx = e.touches[0].clientX;
-            if (tx < window.innerWidth / 2) this.flipGravity();
-        }, { passive: false });
+        // ── Mobile on-screen buttons ──
+        this._wireMobileBtn('btn-left',  () => { this.keys['a'] = true;  }, () => { this.keys['a'] = false; });
+        this._wireMobileBtn('btn-right', () => { this.keys['d'] = true;  }, () => { this.keys['d'] = false; });
+        this._wireMobileBtn('btn-nitro', () => { this.keys['n'] = true;  }, () => { this.keys['n'] = false; });
+        const flipBtn = document.getElementById('btn-flip');
+        if (flipBtn) {
+            const doFlip = e => { e.preventDefault(); if (this.isRunning && !this.isPaused) this.flipGravity(); };
+            flipBtn.addEventListener('touchstart', doFlip, { passive: false });
+            flipBtn.addEventListener('mousedown',  doFlip);
+        }
 
-        // Button listeners
-        document.getElementById('start-btn').onclick   = () => this.startGame();
-        document.getElementById('garage-btn').onclick  = () => { UI.showScreen('garage-screen'); UI.renderGarage(); };
-        document.getElementById('garage-back-btn').onclick = () => UI.showScreen('start-screen');
-        document.getElementById('retry-btn').onclick   = () => this.startGame();
-        document.getElementById('menu-btn').onclick    = () => { UI.hideAllScreens(); UI.showScreen('start-screen'); this.stopGame(); };
-        document.getElementById('resume-btn').onclick  = () => this.togglePause();
-        document.getElementById('pause-menu-btn').onclick = () => { this.stopGame(); UI.showScreen('start-screen'); };
+        // ── Screen button listeners ──
+        document.getElementById('start-btn').onclick      = () => this.startGame();
+        document.getElementById('garage-btn').onclick     = () => { UI.showScreen('garage-screen'); UI.renderGarage(); };
+        document.getElementById('garage-back-btn').onclick= () => UI.showScreen('start-screen');
+        document.getElementById('retry-btn').onclick      = () => this.startGame();
+        document.getElementById('menu-btn').onclick       = () => { this.stopGame(); UI.showScreen('start-screen'); };
+        document.getElementById('resume-btn').onclick     = () => this.togglePause();
+        document.getElementById('pause-quit-btn').onclick = () => { this.stopGame(); UI.showScreen('start-screen'); };
 
-        // Show start screen
+        // Draw background and show menu
+        this._drawBG();
         UI.showScreen('start-screen');
-
-        // Draw idle frame
-        this._drawIdle();
         console.log('[GAME] Ready.');
     },
 
-    _drawIdle() {
+    _wireMobileBtn(id, onDown, onUp) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const down = e => { e.preventDefault(); el.classList.add('active'); onDown(); };
+        const up   = e => { e.preventDefault(); el.classList.remove('active'); onUp(); };
+        el.addEventListener('touchstart',  down, { passive: false });
+        el.addEventListener('touchend',    up,   { passive: false });
+        el.addEventListener('touchcancel', up,   { passive: false });
+        el.addEventListener('mousedown',   down);
+        el.addEventListener('mouseup',     up);
+        el.addEventListener('mouseleave',  up);
+    },
+
+    _drawBG() {
         const ctx = this.canvas.getContext('2d');
         const W = this.canvas.width;
         const H = this.canvas.height;
         ctx.fillStyle = '#050310';
         ctx.fillRect(0, 0, W, H);
-        // Subtle grid
-        ctx.strokeStyle = 'rgba(136,34,255,0.08)';
+        ctx.strokeStyle = 'rgba(136,34,255,0.07)';
         ctx.lineWidth = 1;
-        for (let x = 0; x < W; x += 100) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-        for (let y = 0; y < H; y += 100) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-        requestAnimationFrame(() => this._drawIdle());
+        ctx.beginPath();
+        for (let x = 0; x < W; x += 100) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+        for (let y = 0; y < H; y += 100) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+        ctx.stroke();
     },
 
     resize() {
