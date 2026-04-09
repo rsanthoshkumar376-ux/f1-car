@@ -1,15 +1,30 @@
-const { Engine, Render, World, Bodies, Composite, Constraint, Body, Events, Vector, Mouse, MouseConstraint } = Matter;
-
 const Physics = {
     engine: null,
     world: null,
-    collisionGroups: {
-        car: Matter.Body.nextGroup(true),
-        track: Matter.Body.nextGroup(false),
-        items: Matter.Body.nextGroup(false)
-    },
+    MatterSymbols: {}, // Container for safely scoped Matter classes
+    collisionGroups: {},
     
     init() {
+        // Safe destructuring inside init ensures Matter is loaded
+        const { Engine, Render, World, Bodies, Composite, Constraint, Body, Events, Vector, Mouse, MouseConstraint } = Matter;
+        
+        // Export to window for other scripts (track.js, vehicle.js)
+        window.Engine = Engine;
+        window.Render = Render;
+        window.World = World;
+        window.Bodies = Bodies;
+        window.Composite = Composite;
+        window.Constraint = Constraint;
+        window.Body = Body;
+        window.Events = Events;
+        window.Vector = Vector;
+        
+        this.collisionGroups = {
+            car: Body.nextGroup(true),
+            track: Body.nextGroup(false),
+            items: Body.nextGroup(false)
+        };
+
         this.engine = Engine.create({
             enableSleeping: false
         });
@@ -26,15 +41,17 @@ const Physics = {
     },
 
     update(delta) {
-        Engine.update(this.engine, delta);
+        if (window.Engine) {
+            window.Engine.update(this.engine, delta);
+        }
     },
 
     flipGravity() {
-        this.world.gravity.y *= -1;
+        if (this.world) this.world.gravity.y *= -1;
     },
 
     getGravity() {
-        return this.world.gravity.y;
+        return this.world ? this.world.gravity.y : 0.5;
     }
 };
 

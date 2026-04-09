@@ -58,13 +58,14 @@ const UI = {
         Garage.init();
         const currentCar = Garage.getSelectedCar();
 
-        Garage.cars.forEach(car => {
+        Garage.getCars().forEach(car => {
             const card = document.createElement('div');
             const isEquipped = car.id === currentCar.id;
             card.className = `level-card ${car.unlocked ? '' : 'locked'} ${isEquipped ? 'equipped' : ''}`;
             card.innerHTML = `
                 <h3>${car.name}</h3>
                 <p class="level-objective">${car.description}</p>
+                <div class="stats-mini-container">
                     <div class="stats-mini">SPEED: ${car.stats.speed}/10</div>
                     <div class="stats-mini">STABILITY: ${car.stats.stability}/10</div>
                     <div class="stats-mini">JUMP: ${car.stats.jump}/10</div>
@@ -79,7 +80,7 @@ const UI = {
             } else {
                 card.querySelector('.buy-btn').onclick = (e) => {
                     e.stopPropagation();
-                    if (Garage.unlockCar(car.id, Gameplay.totalCoins || 0)) {
+                    if (Garage.unlockCar(car.id, Gameplay.coins || 0)) {
                         this.renderGarageGrid();
                     }
                 };

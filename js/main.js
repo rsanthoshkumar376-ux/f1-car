@@ -12,34 +12,46 @@ const Game = {
     lastCrashTime: 0,
 
     init() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
+        console.log("ALGORITHMIC_INIT: Starting boot sequence...");
+        try {
+            this.canvas = document.getElementById('gameCanvas');
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
 
-        Physics.init();
-        AudioEngine.init();
-        Garage.init();
-        WorldEngine.init(); // Initialize Algorithmic Seed Logic
-        Levels.init();
-        UI.init();
-        Menu3D.init();
+            console.log("ALGORITHMIC_BOOT [1/7]: Physics...");
+            Physics.init();
+            
+            console.log("ALGORITHMIC_BOOT [2/7]: Audio...");
+            AudioEngine.init();
+            
+            console.log("ALGORITHMIC_BOOT [3/7]: Garage...");
+            Garage.init();
+            
+            console.log("ALGORITHMIC_BOOT [4/7]: World Engine...");
+            WorldEngine.init(); 
+            
+            console.log("ALGORITHMIC_BOOT [5/7]: Levels...");
+            Levels.init();
+            
+            console.log("ALGORITHMIC_BOOT [6/7]: UI...");
+            UI.init();
+            
+            console.log("ALGORITHMIC_BOOT [7/7]: 3D Menu...");
+            Menu3D.init();
 
-        // Input listeners
-        window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
-        window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
-        window.addEventListener('keydown', (e) => {
-            if (e.key === ' ' || e.key === 'w' || e.key === 'ArrowUp') {
-                if (this.isRunning && !this.isPaused) this.flipGravity();
-            }
-        });
+            // Input listeners
+            window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
+            window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
+            
+            UI.showStart();
+            console.log("ALGORITHMIC_INIT: BOOT_COMPLETED_SUCCESSFULLY");
 
-        // Touch support
-        this.canvas.addEventListener('touchstart', (e) => this.handleTouch(e));
-
-        UI.showStart();
-        
-        // Start animation loop
-        requestAnimationFrame((t) => this.loop(t));
+            // Start animation loop
+            requestAnimationFrame((t) => this.loop(t));
+        } catch (e) {
+            console.error("ALGORITHMIC_FATAL_BOOT_FAILURE:", e);
+            alert("BOOT FAILURE: Check console for [ALGORITHMIC_FATAL_BOOT_FAILURE]\n" + e.message);
+        }
     },
 
     resize() {
@@ -278,5 +290,4 @@ const Game = {
 };
 
 window.Game = Game;
-// Initialize when everything's loaded
-window.addEventListener('load', () => Game.init());
+// Initialization is now handled by the robust readyState check in index.html
