@@ -1,0 +1,409 @@
+:root {
+    --neon-blue: #20ff77; /* Spectral Green */
+    --neon-pink: #8822ff; /* Spectral Purple */
+    --neon-purple: #bc00ff;
+    --neon-green: #39ff14;
+    --bg-dark: #050310;
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --critical-red: #ff3131;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: white;
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#menu3dCanvas {
+    z-index: 0;
+    pointer-events: none;
+}
+
+#gameCanvas {
+    z-index: 5;
+    background: transparent;
+    pointer-events: none;
+}
+
+canvas {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* UI Screens */
+.screen {
+    position: absolute;
+    z-index: 100;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    transition: opacity 0.5s ease;
+}
+
+.title-container {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 5rem;
+    font-weight: 900;
+    letter-spacing: 0.5rem;
+    color: var(--neon-blue);
+    text-shadow: 0 0 30px var(--neon-blue), 0 0 10px rgba(255,255,255,0.5);
+    filter: drop-shadow(0 0 15px rgba(32, 255, 119, 0.5));
+}
+
+.glitch {
+    position: relative;
+}
+
+.subtitle {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    color: var(--neon-pink);
+    letter-spacing: 0.8rem;
+    margin-top: -1rem;
+    text-shadow: 0 0 10px var(--neon-pink);
+}
+
+.menu-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 300px;
+}
+
+button {
+    font-family: 'Orbitron', sans-serif;
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+}
+
+.primary-btn {
+    background: var(--neon-blue);
+    color: black;
+    font-weight: bold;
+    box-shadow: 0 0 15px var(--neon-blue);
+}
+
+.primary-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px var(--neon-blue);
+}
+
+.secondary-btn {
+    background: var(--glass-bg);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--neon-pink);
+    color: var(--neon-pink);
+}
+
+/* HUD */
+#hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 2rem;
+    pointer-events: none;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.hud-top, .hud-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.score-container, .coin-container {
+    background: var(--glass-bg);
+    padding: 0.5rem 1.5rem;
+    border-left: 4px solid var(--neon-blue);
+    backdrop-filter: blur(5px);
+}
+
+.coin-container {
+    border-left-color: var(--neon-pink);
+}
+
+.label {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    letter-spacing: 0.1rem;
+}
+
+#score-value, #coin-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+/* Speed Meter */
+.entropy-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+#entropy-value {
+    font-size: 1.5rem;
+    color: var(--neon-blue);
+    text-shadow: 0 0 10px var(--neon-blue);
+}
+
+.speed-meter {
+    width: 250px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    pointer-events: none;
+}
+
+#speed-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
+    box-shadow: 0 0 10px var(--neon-blue);
+    transition: width 0.1s;
+}
+
+/* Gravity Status */
+#gravity-status {
+    width: 60px;
+    height: 60px;
+    border: 2px solid var(--neon-blue);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.5s;
+    background: rgba(0, 242, 255, 0.1);
+}
+
+#gravity-status.flipped {
+    transform: rotate(180deg);
+    border-color: var(--neon-pink);
+    background: rgba(255, 0, 234, 0.1);
+}
+
+.gravity-icon {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+#pause-btn {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    pointer-events: auto;
+    clip-path: circle(50% at 50% 50%);
+    background: var(--glass-bg);
+}
+
+/* Game Over Stats */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.stat-item {
+    text-align: center;
+    background: var(--glass-bg);
+    padding: 1.5rem;
+    border: 1px solid var(--glass-border);
+}
+
+.stat-item.highlight {
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+}
+
+@keyframes pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { opacity: 0.8; }
+}
+
+.critical {
+    color: var(--critical-red);
+    text-shadow: 0 0 20px var(--critical-red);
+    animation: pulse 1s infinite;
+}
+
+/* Algorithmic HUD Overlay */
+#data-stream {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100%;
+    pointer-events: none;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.75rem;
+    color: var(--neon-blue);
+    opacity: 0.4;
+    padding: 2rem;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+    z-index: 50;
+}
+
+.formula-overlay {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1rem;
+    color: var(--neon-blue);
+    opacity: 0.6;
+    text-shadow: 0 0 10px var(--neon-blue);
+    pointer-events: none;
+    z-index: 100;
+}
+
+.data-line {
+    white-space: pre;
+    margin-bottom: 4px;
+    text-shadow: 0 0 5px var(--neon-blue);
+}
+
+@media (max-width: 768px) {
+/* Levels & Garage Grid */
+.levels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    width: 90%;
+    max-width: 1200px;
+    margin-top: 2rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.levels-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.levels-grid::-webkit-scrollbar-thumb {
+    background: var(--neon-blue);
+    border-radius: 3px;
+}
+
+.level-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    padding: 1.8rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.level-card:hover:not(.locked) {
+    border-color: var(--neon-blue);
+    background: rgba(32, 255, 119, 0.1);
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(32, 255, 119, 0.2);
+}
+
+.level-card.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+    border-color: rgba(255,255,255,0.1);
+}
+
+.level-card.equipped {
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 20px rgba(32, 255, 119, 0.4);
+    background: rgba(32, 255, 119, 0.05);
+}
+
+.level-card.equipped::before {
+    content: 'EQUIPPED';
+    position: absolute;
+    top: 5px;
+    right: -25px;
+    background: var(--neon-blue);
+    color: black;
+    font-size: 0.6rem;
+    font-weight: bold;
+    padding: 2px 30px;
+    transform: rotate(45deg);
+}
+
+.level-card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    color: var(--neon-blue);
+}
+
+.stats-mini {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin: 0.5rem 0;
+}
+
+.buy-btn, .equip-btn {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    clip-path: none;
+}
